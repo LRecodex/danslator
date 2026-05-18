@@ -28,6 +28,7 @@ interface ProcessOptions {
   openAiApiKey: string;
   geminiApiKey: string;
   groqApiKey: string;
+  groqModel: string;
 }
 
 function sleep(ms: number) {
@@ -350,7 +351,8 @@ export async function processPdf(
             provider: options.provider,
             openAiApiKey: options.openAiApiKey,
             geminiApiKey: options.geminiApiKey,
-            groqApiKey: options.groqApiKey
+            groqApiKey: options.groqApiKey,
+            groqModel: options.groqModel
           });
           translated.push(...batchResult);
           success = true;

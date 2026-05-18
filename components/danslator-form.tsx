@@ -17,6 +17,7 @@ export function DanslatorForm() {
   const [openAiApiKey, setOpenAiApiKey] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [groqApiKey, setGroqApiKey] = useState('');
+  const [groqModel, setGroqModel] = useState('llama-3.1-8b-instant');
   const [isDragging, setIsDragging] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressState>(initialProgress);
@@ -75,6 +76,7 @@ export function DanslatorForm() {
     formData.append('openAiApiKey', openAiApiKey.trim());
     formData.append('geminiApiKey', geminiApiKey.trim());
     formData.append('groqApiKey', groqApiKey.trim());
+    formData.append('groqModel', groqModel);
 
     try {
       const res = await fetch('/api/translate', { method: 'POST', body: formData });
@@ -107,7 +109,7 @@ export function DanslatorForm() {
         onClick={() => inputRef.current?.click()}
       >
         <p><strong>Drop your PDF here</strong> or click to browse</p>
-        <p className="muted">Supports large PDFs. Keep the tab open while translating.</p>
+        <p className="muted">Supports large PDFs. Keep this tab open while translation is running.</p>
         <input
           ref={inputRef}
           type="file"
@@ -117,7 +119,9 @@ export function DanslatorForm() {
         />
       </div>
 
-      <div className="row" style={{ marginTop: 16 }}>
+      <div className="section">
+        <div className="section-title">Translation Settings</div>
+      <div className="row">
         <div className="field">
           <label htmlFor="direction">Language Direction</label>
           <select
@@ -161,15 +165,26 @@ export function DanslatorForm() {
               else setGroqApiKey(e.target.value);
             }}
           />
+          {provider === 'groq' ? (
+            <>
+              <label htmlFor="groq-model" style={{ marginTop: 8 }}>Groq Model</label>
+              <select id="groq-model" value={groqModel} onChange={(e) => setGroqModel(e.target.value)}>
+                <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
+                <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+                <option value="meta-llama/llama-4-scout-17b-16e-instruct">llama-4-scout-17b-16e-instruct</option>
+              </select>
+            </>
+          ) : null}
           <p className="muted" style={{ marginTop: 8 }}>
             Provide the API key for the selected provider. Keys are sent per request only.
           </p>
         </div>
       </div>
+      </div>
 
       {file ? (
-        <div style={{ marginTop: 16 }}>
-          <label>Translation Mode</label>
+        <div className="section">
+          <div className="section-title">Translation Mode</div>
           <div className="checkbox">
             <input
               id="text-only"
@@ -201,12 +216,15 @@ export function DanslatorForm() {
         </div>
       ) : null}
 
-      <button type="button" onClick={handleSubmit} disabled={!canTranslate}>
+      <button className="primary-btn" type="button" onClick={handleSubmit} disabled={!canTranslate}>
         Translate PDF
       </button>
 
-      <div className="progress">
-        <p className="muted">
+      <div className="progress panel">
+        <div className="status-line">
+          <span className={`status-chip ${progress.status}`}>{progress.status.toUpperCase()}</span>
+        </div>
+        <p className="muted" style={{ marginTop: 8 }}>
           {file ? `Selected file: ${file.name}` : 'No file selected'}
         </p>
         <p>{progress.message}</p>
@@ -218,7 +236,7 @@ export function DanslatorForm() {
       {progress.status === 'complete' && jobId ? (
         <div className="download">
           <a href={`/api/download/${jobId}`}>
-            <button type="button">Download Translated PDF</button>
+            <button className="primary-btn" type="button">Download Translated PDF</button>
           </a>
         </div>
       ) : null}

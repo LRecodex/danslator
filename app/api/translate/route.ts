@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     const openAiApiKey = (formData.get('openAiApiKey') as string | null)?.trim() ?? '';
     const geminiApiKey = (formData.get('geminiApiKey') as string | null)?.trim() ?? '';
     const groqApiKey = (formData.get('groqApiKey') as string | null)?.trim() ?? '';
+    const groqModel = (formData.get('groqModel') as string | null)?.trim() || 'llama-3.1-8b-instant';
 
     if (!file) {
       return NextResponse.json({ error: 'No PDF file uploaded' }, { status: 400 });
@@ -70,7 +71,8 @@ export async function POST(req: NextRequest) {
           fileName: file.name,
           openAiApiKey,
           geminiApiKey,
-          groqApiKey
+          groqApiKey,
+          groqModel
         });
         setJobOutput(jobId, result.output, result.outputFileName);
         console.log('[Danslator][translate:done]', {

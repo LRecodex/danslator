@@ -7,6 +7,7 @@ interface TranslateOptions {
   openAiApiKey?: string;
   geminiApiKey?: string;
   groqApiKey?: string;
+  groqModel?: string;
 }
 
 export async function translateChunks(chunks: string[], options: TranslateOptions) {
@@ -21,7 +22,12 @@ export async function translateChunks(chunks: string[], options: TranslateOption
   }
 
   if (options.provider === 'groq' && options.groqApiKey) {
-    return translateWithGroq(chunks, options.direction, options.groqApiKey);
+    return translateWithGroq(
+      chunks,
+      options.direction,
+      options.groqApiKey,
+      options.groqModel || 'llama-3.1-8b-instant'
+    );
   }
 
   if (options.provider === 'openai') {
@@ -149,7 +155,8 @@ async function translateWithGemini(
 async function translateWithGroq(
   chunks: string[],
   direction: TranslateDirection,
-  apiKey: string
+  apiKey: string,
+  model: string
 ): Promise<string[]> {
   try {
     const sourceLang = direction === 'en-ms' ? 'English' : 'Malay';
@@ -163,7 +170,6 @@ async function translateWithGroq(
     '- Keep empty strings as empty strings.'
   ].join('\n');
 
-    const model = process.env.GROQ_MODEL?.trim() || 'llama-3.1-8b-instant';
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {

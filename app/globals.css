@@ -1,12 +1,12 @@
 :root {
-  --bg: #f3f7fb;
+  --bg: #eef3f9;
   --card: #ffffff;
-  --primary: #0f766e;
-  --primary-2: #155e75;
+  --primary: #0b6b5f;
+  --primary-2: #0a8b78;
   --text: #0f172a;
-  --muted: #475569;
+  --muted: #516176;
   --danger: #b91c1c;
-  --border: #dbe4ef;
+  --border: #d4deea;
 }
 
 * {
@@ -15,11 +15,11 @@
 
 body {
   margin: 0;
-  font-family: "Sora", "Manrope", sans-serif;
+  font-family: "Sora", "Manrope", "Segoe UI", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at top right, #dff6f1 0%, transparent 32%),
-    radial-gradient(circle at bottom left, #dbeafe 0%, transparent 36%),
+    radial-gradient(circle at top right, #daf2ee 0%, transparent 30%),
+    radial-gradient(circle at bottom left, #d8e6f8 0%, transparent 34%),
     var(--bg);
   min-height: 100vh;
 }
@@ -31,12 +31,12 @@ main {
 }
 
 .hero {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
   letter-spacing: -0.04em;
 }
 
@@ -48,49 +48,76 @@ main {
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
-  padding: 20px;
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  padding: 22px;
 }
 
 .dropzone {
-  border: 2px dashed #8fb8d6;
-  border-radius: 12px;
-  padding: 28px;
+  border: 2px dashed #8aaecd;
+  border-radius: 14px;
+  padding: 30px;
   text-align: center;
-  background: linear-gradient(180deg, #f8fbff 0%, #f4fbfa 100%);
-  transition: border-color 0.2s ease;
+  background: linear-gradient(180deg, #f7fbff 0%, #f3fbfa 100%);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
 }
 
 .dropzone.active {
   border-color: var(--primary);
+  transform: translateY(-1px);
 }
 
 .row {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
 .field {
   flex: 1;
-  min-width: 220px;
+  min-width: 260px;
 }
 
 label {
   display: block;
   margin: 0 0 8px;
   font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e4ebf3;
+}
+
+.section-title {
+  font-weight: 700;
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #334155;
 }
 
 select,
 button,
-input[type="file"] {
+input[type="file"],
+input[type="password"] {
   width: 100%;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid var(--border);
-  padding: 10px 12px;
+  padding: 11px 12px;
   font: inherit;
+  background: #fff;
+}
+
+select:focus,
+input[type="password"]:focus {
+  outline: none;
+  border-color: #7eaed8;
+  box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.12);
 }
 
 button {
@@ -102,19 +129,69 @@ button {
 }
 
 button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
+}
+
+.primary-btn {
+  margin-top: 18px;
+  height: 44px;
 }
 
 .checkbox {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  margin: 14px 0;
+  margin: 12px 0;
+}
+
+.checkbox input {
+  margin-top: 3px;
 }
 
 .progress {
-  margin-top: 14px;
+  margin-top: 16px;
+}
+
+.panel {
+  background: #f8fbff;
+  border: 1px solid #e1e9f4;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.status-line {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.status-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+}
+
+.status-chip.queued,
+.status-chip.uploading {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.status-chip.processing {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-chip.complete {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.status-chip.error {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .progress-bar {
@@ -142,5 +219,17 @@ button:disabled {
 }
 
 .download {
-  margin-top: 18px;
+  margin-top: 14px;
+}
+
+@media (max-width: 700px) {
+  main {
+    padding: 24px 12px 40px;
+  }
+  .card {
+    padding: 16px;
+  }
+  .field {
+    min-width: 100%;
+  }
 }
