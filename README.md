@@ -11,7 +11,7 @@ Danslator is a web app to translate PDF documents between English and Malay, wit
 - Post-upload mode choice:
   - Translate PDF text only
   - Translate PDF text + text inside images
-- OCR support for image text (`tesseract.js`)
+- OCR support for image text (`pdftoppm` + `tesseract` CLI)
 - Progress tracking (upload, processing, completion)
 - Download translated PDF output
 
@@ -20,7 +20,7 @@ Danslator is a web app to translate PDF documents between English and Malay, wit
 - Frontend: Next.js + React
 - Backend: Next.js API routes (Node.js runtime)
 - PDF extraction: `pdfjs-dist`
-- OCR: `tesseract.js` + `canvas`
+- OCR: `pdftoppm` (Poppler) + `tesseract` CLI
 - Translation: OpenAI, Gemini, or Groq
 - PDF output generation: `pdf-lib`
 
@@ -57,6 +57,21 @@ If you want OCR mode (`Translate PDF text + text inside images`) on Linux/WSL, i
 sudo apt-get update
 sudo apt-get install -y build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev pkg-config
 ```
+
+Install OCR CLI dependencies required by Danslator:
+
+- `pdftoppm` (Poppler)
+- `tesseract` OCR with language packs (`eng`, `msa`)
+
+Linux/WSL example:
+
+```bash
+sudo apt-get install -y poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-msa
+```
+
+Windows:
+- Install Poppler for Windows and add its `bin` folder to `PATH` (for `pdftoppm`).
+- Install Tesseract for Windows and add install folder to `PATH`.
 
 ## 3. Configure environment
 
@@ -155,6 +170,6 @@ npm run start
 ## Notes and limitations
 
 - Layout preservation is best effort (overlay strategy on copied pages).
-- OCR mode is slower on large PDFs and requires optional native dependency support for `canvas`.
+- OCR mode is slower on large PDFs and requires `pdftoppm` + `tesseract` installed and available in `PATH`.
 - Very complex layouts may not perfectly match original text flow.
 - Jobs are stored on local disk under `/tmp/danslator-jobs` and expire automatically; for production, use persistent shared storage.
