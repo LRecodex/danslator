@@ -30,7 +30,12 @@ function getPdfLoadOptions(pdfBytes: Uint8Array) {
   const standardFontDataUrl = pathToFileURL(fontDir + path.sep).toString();
   return {
     data: pdfBytes,
-    standardFontDataUrl
+    standardFontDataUrl,
+    // In Node/Windows environments, PDF.js worker transfer can throw:
+    // "Cannot transfer object of unsupported type".
+    // Keep processing in-process for stability.
+    disableWorker: true,
+    useWorkerFetch: false
   };
 }
 
