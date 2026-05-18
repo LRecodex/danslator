@@ -1,6 +1,6 @@
 # Danslator
 
-Danslator is a web app to translate PDF documents between English and Malay, with optional OCR for text inside images.
+Danslator is a web app to translate PDF text documents between English and Malay.
 
 ## Features
 
@@ -8,10 +8,7 @@ Danslator is a web app to translate PDF documents between English and Malay, wit
 - Translation direction:
   - English -> Malay
   - Malay -> English
-- Post-upload mode choice:
-  - Translate PDF text only
-  - Translate PDF text + text inside images
-- OCR support for image text (`pdftoppm` + `tesseract` CLI)
+- Text-only PDF translation
 - Progress tracking (upload, processing, completion)
 - Download translated PDF output
 
@@ -20,7 +17,6 @@ Danslator is a web app to translate PDF documents between English and Malay, wit
 - Frontend: Next.js + React
 - Backend: Next.js API routes (Node.js runtime)
 - PDF extraction: `pdfjs-dist`
-- OCR: `pdftoppm` (Poppler) + `tesseract` CLI
 - Translation: OpenAI, Gemini, or Groq
 - PDF output generation: `pdf-lib`
 
@@ -51,27 +47,12 @@ rm -rf node_modules package-lock.json
 npm install
 ```
 
-If you want OCR mode (`Translate PDF text + text inside images`) on Linux/WSL, install native build tools first:
+If you run on Linux/WSL, install native build tools first:
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev pkg-config
 ```
-
-Install OCR CLI dependencies required by Danslator:
-
-- `pdftoppm` (Poppler)
-- `tesseract` OCR with language packs (`eng`, `msa`)
-
-Linux/WSL example:
-
-```bash
-sudo apt-get install -y poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-msa
-```
-
-Windows:
-- Install Poppler for Windows and add its `bin` folder to `PATH` (for `pdftoppm`).
-- Install Tesseract for Windows and add install folder to `PATH`.
 
 ## 3. Configure environment
 
@@ -133,15 +114,12 @@ Open:
    - Malay -> English
 4. Choose provider (`OpenAI`, `Gemini`, or `Groq`).
 5. Paste the matching API key.
-6. Choose translation mode:
-   - `Translate PDF text only`
-   - `Translate PDF text + text inside images`
-7. Choose output style:
+6. Choose output style:
    - `Clean Regenerated PDF (recommended)`
    - `Overlay on Original PDF`
-8. Click `Translate PDF`.
-9. Wait while progress updates.
-10. Click `Download Translated PDF` when complete.
+7. Click `Translate PDF`.
+8. Wait while progress updates.
+9. Click `Download Translated PDF` when complete.
 
 ## Build and production run
 
@@ -164,7 +142,6 @@ npm run start
     - `file` (PDF)
     - `direction` (`en-ms` or `ms-en`)
     - `provider` (`openai`, `gemini`, or `groq`)
-    - `includeImageText` (`true` or `false`)
     - `outputStyle` (`clean` or `overlay`)
     - `openAiApiKey` (string, optional)
     - `geminiApiKey` (string, optional)
@@ -176,6 +153,5 @@ npm run start
 ## Notes and limitations
 
 - Layout preservation is best effort (overlay strategy on copied pages).
-- OCR mode is slower on large PDFs and requires `pdftoppm` + `tesseract` installed and available in `PATH`.
 - Very complex layouts may not perfectly match original text flow.
 - Jobs are stored on local disk under `/tmp/danslator-jobs` and expire automatically; for production, use persistent shared storage.

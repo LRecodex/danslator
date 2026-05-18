@@ -13,7 +13,6 @@ export function DanslatorForm() {
   const [file, setFile] = useState<File | null>(null);
   const [direction, setDirection] = useState<TranslateDirection>('en-ms');
   const [provider, setProvider] = useState<TranslationProvider>('openai');
-  const [mode, setMode] = useState<'text-only' | 'text-images'>('text-only');
   const [outputStyle, setOutputStyle] = useState<OutputStyle>('clean');
   const [openAiApiKey, setOpenAiApiKey] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState('');
@@ -73,7 +72,7 @@ export function DanslatorForm() {
     formData.append('file', file);
     formData.append('direction', direction);
     formData.append('provider', provider);
-    formData.append('includeImageText', String(mode === 'text-images'));
+    formData.append('includeImageText', 'false');
     formData.append('outputStyle', outputStyle);
     formData.append('openAiApiKey', openAiApiKey.trim());
     formData.append('geminiApiKey', geminiApiKey.trim());
@@ -186,36 +185,7 @@ export function DanslatorForm() {
 
       {file ? (
         <div className="section">
-          <div className="section-title">Translation Mode</div>
-          <div className="checkbox">
-            <input
-              id="text-only"
-              type="radio"
-              name="translation-mode"
-              checked={mode === 'text-only'}
-              onChange={() => {
-                setMode('text-only');
-              }}
-            />
-            <label htmlFor="text-only" style={{ margin: 0, fontWeight: 500 }}>
-              Translate PDF text only
-            </label>
-          </div>
-          <div className="checkbox">
-            <input
-              id="text-images"
-              type="radio"
-              name="translation-mode"
-              checked={mode === 'text-images'}
-              onChange={() => {
-                setMode('text-images');
-              }}
-            />
-            <label htmlFor="text-images" style={{ margin: 0, fontWeight: 500 }}>
-              Translate PDF text + text inside images
-            </label>
-          </div>
-          <label htmlFor="output-style" style={{ marginTop: 10 }}>Output Style</label>
+          <div className="section-title">Output Style</div>
           <select
             id="output-style"
             value={outputStyle}

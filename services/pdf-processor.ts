@@ -347,27 +347,7 @@ export async function processPdf(
     const pdfBlocks = await extractPdfTextBlocks(pdfBytes);
     log('extract:done', { pdfTextBlocks: pdfBlocks.length });
 
-    let ocrBlocks: TextBlock[] = [];
-    if (options.includeImageText) {
-      report('Preparing OCR for images', 25);
-      log('ocr:start');
-      try {
-        ocrBlocks = await extractOcrBlocks(inputBuffer, pdfBytes, report);
-        log('ocr:done', { ocrBlocks: ocrBlocks.length });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        const canFallback =
-          message.includes('Document stream is empty') ||
-          message.toLowerCase().includes('no pdf stream') ||
-          message.includes('Cannot transfer object of unsupported type') ||
-          message.includes('is not installed or not in PATH');
-
-        if (!canFallback) throw error;
-        logError('ocr:fallback_to_text_only', error, { reason: 'ocr_backend_error' });
-        report('OCR unavailable for this file/environment, continuing with PDF text only', 45);
-        ocrBlocks = [];
-      }
-    }
+    const ocrBlocks: TextBlock[] = [];
 
     const allBlocks = [...pdfBlocks, ...ocrBlocks];
     report('Translating extracted text', 55);

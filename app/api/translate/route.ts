@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const direction = (formData.get('direction') as TranslateDirection | null) ?? 'en-ms';
     const provider = (formData.get('provider') as TranslationProvider | null) ?? 'openai';
     const outputStyle = (formData.get('outputStyle') as OutputStyle | null) ?? 'clean';
-    const includeImageText = formData.get('includeImageText') === 'true';
+    const includeImageText = false;
     const openAiApiKey = (formData.get('openAiApiKey') as string | null)?.trim() ?? '';
     const geminiApiKey = (formData.get('geminiApiKey') as string | null)?.trim() ?? '';
     const groqApiKey = (formData.get('groqApiKey') as string | null)?.trim() ?? '';
