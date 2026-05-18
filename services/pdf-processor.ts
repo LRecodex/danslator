@@ -5,6 +5,7 @@ import { updateJob } from '@/lib/job-store';
 import { createWorker } from 'tesseract.js';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as path from 'path';
+import { pathToFileURL } from 'url';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/legacy/build/pdf.worker.mjs',
@@ -25,7 +26,8 @@ interface ProcessOptions {
 }
 
 function getPdfLoadOptions(pdfBytes: Uint8Array) {
-  const standardFontDataUrl = path.join(process.cwd(), 'node_modules', 'pdfjs-dist', 'standard_fonts') + path.sep;
+  const fontDir = path.join(process.cwd(), 'node_modules', 'pdfjs-dist', 'standard_fonts');
+  const standardFontDataUrl = pathToFileURL(fontDir + path.sep).toString();
   return {
     data: pdfBytes,
     standardFontDataUrl
