@@ -35,14 +35,24 @@ export async function translateChunks(chunks: string[], options: TranslateOption
   throw new Error('Groq API key is missing. Please provide a valid Groq key.');
 }
 
+function logProviderError(provider: TranslationProvider, error: unknown, meta?: Record<string, unknown>) {
+  const err = error instanceof Error ? error : new Error(String(error));
+  console.error(`[Danslator][translation:${provider}]`, {
+    message: err.message,
+    stack: err.stack,
+    ...meta
+  });
+}
+
 async function translateWithOpenAI(
   chunks: string[],
   direction: TranslateDirection,
   apiKey: string
 ): Promise<string[]> {
-  const client = new OpenAI({ apiKey });
-  const sourceLang = direction === 'en-ms' ? 'English' : 'Malay';
-  const targetLang = direction === 'en-ms' ? 'Malay' : 'English';
+  try {
+    const client = new OpenAI({ apiKey });
+    const sourceLang = direction === 'en-ms' ? 'English' : 'Malay';
+    const targetLang = direction === 'en-ms' ? 'Malay' : 'English';
 
   const prompt = [
     `Translate each array item from ${sourceLang} to ${targetLang}.`,
@@ -52,22 +62,26 @@ async function translateWithOpenAI(
     '- Keep empty strings as empty strings.'
   ].join('\n');
 
-  const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    temperature: 0.1,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: prompt },
-      { role: 'user', content: JSON.stringify({ texts: chunks }) }
-    ]
-  });
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.1,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: prompt },
+        { role: 'user', content: JSON.stringify({ texts: chunks }) }
+      ]
+    });
 
-  const content = response.choices[0]?.message?.content ?? '{"texts":[]}';
-  const parsed = JSON.parse(content) as { texts?: string[] };
-  if (!parsed.texts || !Array.isArray(parsed.texts)) {
-    throw new Error('OpenAI returned invalid translation payload');
+    const content = response.choices[0]?.message?.content ?? '{"texts":[]}';
+    const parsed = JSON.parse(content) as { texts?: string[] };
+    if (!parsed.texts || !Array.isArray(parsed.texts)) {
+      throw new Error('OpenAI returned invalid translation payload');
+    }
+    return parsed.texts;
+  } catch (error) {
+    logProviderError('openai', error, { chunkCount: chunks.length });
+    throw error;
   }
-  return parsed.texts;
 }
 
 async function translateWithGemini(
@@ -75,8 +89,9 @@ async function translateWithGemini(
   direction: TranslateDirection,
   apiKey: string
 ): Promise<string[]> {
-  const sourceLang = direction === 'en-ms' ? 'English' : 'Malay';
-  const targetLang = direction === 'en-ms' ? 'Malay' : 'English';
+  try {
+    const sourceLang = direction === 'en-ms' ? 'English' : 'Malay';
+    const targetLang = direction === 'en-ms' ? 'Malay' : 'English';
 
   const prompt = [
     `Translate each array item from ${sourceLang} to ${targetLang}.`,
@@ -86,45 +101,49 @@ async function translateWithGemini(
     '- Keep empty strings as empty strings.'
   ].join('\n');
 
-  const endpoint =
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' +
-    encodeURIComponent(apiKey);
+    const endpoint =
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' +
+      encodeURIComponent(apiKey);
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: `${prompt}\n\n${JSON.stringify({ texts: chunks })}` }]
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `${prompt}\n\n${JSON.stringify({ texts: chunks })}` }]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: 'application/json'
         }
-      ],
-      generationConfig: {
-        temperature: 0.1,
-        responseMimeType: 'application/json'
-      }
-    })
-  });
+      })
+    });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Gemini error (${res.status}): ${body.slice(0, 200)}`);
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Gemini error (${res.status}): ${body.slice(0, 200)}`);
+    }
+
+    const data = (await res.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+      }>;
+    };
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{"texts":[]}';
+    const parsed = JSON.parse(text) as { texts?: string[] };
+    if (!parsed.texts || !Array.isArray(parsed.texts)) {
+      throw new Error('Gemini returned invalid translation payload');
+    }
+
+    return parsed.texts;
+  } catch (error) {
+    logProviderError('gemini', error, { chunkCount: chunks.length });
+    throw error;
   }
-
-  const data = (await res.json()) as {
-    candidates?: Array<{
-      content?: { parts?: Array<{ text?: string }> };
-    }>;
-  };
-
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '{"texts":[]}';
-  const parsed = JSON.parse(text) as { texts?: string[] };
-  if (!parsed.texts || !Array.isArray(parsed.texts)) {
-    throw new Error('Gemini returned invalid translation payload');
-  }
-
-  return parsed.texts;
 }
 
 async function translateWithGroq(
@@ -132,8 +151,9 @@ async function translateWithGroq(
   direction: TranslateDirection,
   apiKey: string
 ): Promise<string[]> {
-  const sourceLang = direction === 'en-ms' ? 'English' : 'Malay';
-  const targetLang = direction === 'en-ms' ? 'Malay' : 'English';
+  try {
+    const sourceLang = direction === 'en-ms' ? 'English' : 'Malay';
+    const targetLang = direction === 'en-ms' ? 'Malay' : 'English';
 
   const prompt = [
     `Translate each array item from ${sourceLang} to ${targetLang}.`,
@@ -143,36 +163,40 @@ async function translateWithGroq(
     '- Keep empty strings as empty strings.'
   ].join('\n');
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
-      temperature: 0.1,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: prompt },
-        { role: 'user', content: JSON.stringify({ texts: chunks }) }
-      ]
-    })
-  });
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        temperature: 0.1,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: prompt },
+          { role: 'user', content: JSON.stringify({ texts: chunks }) }
+        ]
+      })
+    });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Groq error (${res.status}): ${body.slice(0, 200)}`);
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Groq error (${res.status}): ${body.slice(0, 200)}`);
+    }
+
+    const data = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const content = data.choices?.[0]?.message?.content ?? '{"texts":[]}';
+    const parsed = JSON.parse(content) as { texts?: string[] };
+    if (!parsed.texts || !Array.isArray(parsed.texts)) {
+      throw new Error('Groq returned invalid translation payload');
+    }
+
+    return parsed.texts;
+  } catch (error) {
+    logProviderError('groq', error, { chunkCount: chunks.length });
+    throw error;
   }
-
-  const data = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
-  const content = data.choices?.[0]?.message?.content ?? '{"texts":[]}';
-  const parsed = JSON.parse(content) as { texts?: string[] };
-  if (!parsed.texts || !Array.isArray(parsed.texts)) {
-    throw new Error('Groq returned invalid translation payload');
-  }
-
-  return parsed.texts;
 }

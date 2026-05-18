@@ -135,81 +135,123 @@ export async function processPdf(
   inputBuffer: Buffer,
   options: ProcessOptions
 ): Promise<{ output: Buffer; outputFileName: string }> {
+  const log = (stage: string, meta?: Record<string, unknown>) => {
+    console.log(`[Danslator][processPdf:${stage}]`, { jobId: options.jobId, ...meta });
+  };
+  const logError = (stage: string, error: unknown, meta?: Record<string, unknown>) => {
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error(`[Danslator][processPdf:${stage}]`, {
+      jobId: options.jobId,
+      message: err.message,
+      stack: err.stack,
+      ...meta
+    });
+  };
+
   const report = (message: string, progress: number) => {
     updateJob(options.jobId, { status: 'processing', message, progress });
   };
 
-  report('Extracting PDF text', 10);
-  const pdfBytes = new Uint8Array(inputBuffer);
-  const pdfBlocks = await extractPdfTextBlocks(pdfBytes);
+  try {
+    report('Extracting PDF text', 10);
+    log('extract:start');
+    const pdfBytes = new Uint8Array(inputBuffer);
+    const pdfBlocks = await extractPdfTextBlocks(pdfBytes);
+    log('extract:done', { pdfTextBlocks: pdfBlocks.length });
 
-  let ocrBlocks: TextBlock[] = [];
-  if (options.includeImageText) {
-    report('Preparing OCR for images', 25);
-    ocrBlocks = await extractOcrBlocks(pdfBytes, report);
-  }
+    let ocrBlocks: TextBlock[] = [];
+    if (options.includeImageText) {
+      report('Preparing OCR for images', 25);
+      log('ocr:start');
+      ocrBlocks = await extractOcrBlocks(pdfBytes, report);
+      log('ocr:done', { ocrBlocks: ocrBlocks.length });
+    }
 
-  const allBlocks = [...pdfBlocks, ...ocrBlocks];
-  report('Translating extracted text', 55);
-
-  const textList = allBlocks.map((b) => b.text);
-  const translated: string[] = [];
-
-  const batches = chunkStrings(textList, 30);
-  for (let i = 0; i < batches.length; i++) {
-    const batchResult = await translateChunks(batches[i], {
-      direction: options.direction,
+    const allBlocks = [...pdfBlocks, ...ocrBlocks];
+    report('Translating extracted text', 55);
+    log('translate:start', {
       provider: options.provider,
-      openAiApiKey: options.openAiApiKey,
-      geminiApiKey: options.geminiApiKey,
-      groqApiKey: options.groqApiKey
+      totalBlocks: allBlocks.length
     });
-    translated.push(...batchResult);
-    const pct = 55 + Math.round(((i + 1) / batches.length) * 25);
-    report(`Translating content (${i + 1}/${batches.length})`, pct);
-  }
 
-  report('Generating translated PDF', 85);
+    const textList = allBlocks.map((b) => b.text);
+    const translated: string[] = [];
 
-  const sourcePdf = await PDFDocument.load(inputBuffer);
-  const outPdf = await PDFDocument.create();
-  const font = await outPdf.embedFont(StandardFonts.Helvetica);
+    const batches = chunkStrings(textList, 30);
+    for (let i = 0; i < batches.length; i++) {
+      try {
+        const batchResult = await translateChunks(batches[i], {
+          direction: options.direction,
+          provider: options.provider,
+          openAiApiKey: options.openAiApiKey,
+          geminiApiKey: options.geminiApiKey,
+          groqApiKey: options.groqApiKey
+        });
+        translated.push(...batchResult);
+      } catch (error) {
+        logError('translate:batch_failed', error, {
+          batchIndex: i + 1,
+          totalBatches: batches.length,
+          provider: options.provider
+        });
+        throw error;
+      }
+      const pct = 55 + Math.round(((i + 1) / batches.length) * 25);
+      report(`Translating content (${i + 1}/${batches.length})`, pct);
+    }
+    log('translate:done', { translatedCount: translated.length });
 
-  for (let i = 0; i < sourcePdf.getPageCount(); i++) {
-    const [copied] = await outPdf.copyPages(sourcePdf, [i]);
-    outPdf.addPage(copied);
-  }
+    report('Generating translated PDF', 85);
+    log('pdf_build:start');
 
-  for (let i = 0; i < allBlocks.length; i++) {
-    const block = allBlocks[i];
-    const page = outPdf.getPage(block.pageIndex);
-    const translatedText = translated[i] ?? block.text;
-    const fontSize = Math.max(8, Math.min(14, block.height));
+    const sourcePdf = await PDFDocument.load(inputBuffer);
+    const outPdf = await PDFDocument.create();
+    const font = await outPdf.embedFont(StandardFonts.Helvetica);
+
+    for (let i = 0; i < sourcePdf.getPageCount(); i++) {
+      const [copied] = await outPdf.copyPages(sourcePdf, [i]);
+      outPdf.addPage(copied);
+    }
+
+    for (let i = 0; i < allBlocks.length; i++) {
+      const block = allBlocks[i];
+      const page = outPdf.getPage(block.pageIndex);
+      const translatedText = translated[i] ?? block.text;
+      const fontSize = Math.max(8, Math.min(14, block.height));
 
     // Paint a solid white mask slightly larger than the detected text box
     // so source glyph edges do not bleed through.
-    const padX = 2;
-    const padY = 2;
-    page.drawRectangle({
-      x: Math.max(0, block.x - padX),
-      y: Math.max(0, block.y - padY),
-      width: Math.max(14, block.width + padX * 2),
-      height: Math.max(12, block.height + padY * 2 + 2),
-      color: rgb(1, 1, 1),
-      opacity: 1
-    });
+      const padX = 2;
+      const padY = 2;
+      page.drawRectangle({
+        x: Math.max(0, block.x - padX),
+        y: Math.max(0, block.y - padY),
+        width: Math.max(14, block.width + padX * 2),
+        height: Math.max(12, block.height + padY * 2 + 2),
+        color: rgb(1, 1, 1),
+        opacity: 1
+      });
 
-    page.drawText(translatedText, {
-      x: Math.max(0, block.x),
-      y: Math.max(0, block.y),
-      maxWidth: Math.max(20, block.width),
-      size: fontSize,
-      font,
-      color: rgb(0, 0, 0)
+      page.drawText(translatedText, {
+        x: Math.max(0, block.x),
+        y: Math.max(0, block.y),
+        maxWidth: Math.max(20, block.width),
+        size: fontSize,
+        font,
+        color: rgb(0, 0, 0)
+      });
+    }
+
+    const output = Buffer.from(await outPdf.save());
+    const outputFileName = options.fileName.replace(/\.pdf$/i, '') + '.translated.pdf';
+    log('pdf_build:done', { outputFileName });
+    return { output, outputFileName };
+  } catch (error) {
+    logError('failed', error, {
+      provider: options.provider,
+      includeImageText: options.includeImageText,
+      fileName: options.fileName
     });
+    throw error;
   }
-
-  const output = Buffer.from(await outPdf.save());
-  const outputFileName = options.fileName.replace(/\.pdf$/i, '') + '.translated.pdf';
-  return { output, outputFileName };
 }

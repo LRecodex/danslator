@@ -7,6 +7,15 @@ import { TranslateDirection, TranslationProvider } from '@/types';
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
+function logError(scope: string, error: unknown, meta?: Record<string, unknown>) {
+  const err = error instanceof Error ? error : new Error(String(error));
+  console.error(`[Danslator][${scope}]`, {
+    message: err.message,
+    stack: err.stack,
+    ...meta
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -38,6 +47,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Groq API key is required for Groq provider.' }, { status: 400 });
     }
     const jobId = uuidv4();
+    console.log('[Danslator][translate:start]', {
+      jobId,
+      fileName: file.name,
+      direction,
+      provider,
+      includeImageText
+    });
     createJob(jobId);
     updateJob(jobId, { status: 'uploading', message: 'Receiving uploaded file', progress: 5 });
 
@@ -57,8 +73,13 @@ export async function POST(req: NextRequest) {
           groqApiKey
         });
         setJobOutput(jobId, result.output, result.outputFileName);
+        console.log('[Danslator][translate:done]', {
+          jobId,
+          outputFileName: result.outputFileName
+        });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown processing error';
+        logError('translate:background', err, { jobId, provider, fileName: file.name });
         failJob(jobId, message);
       }
     })();
@@ -66,6 +87,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ jobId });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unexpected server error';
+    logError('translate:route', err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
