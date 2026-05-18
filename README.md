@@ -74,6 +74,30 @@ Current app behavior:
 - Provider key is always read from user input in the form per request.
 - No provider key is loaded from `.env`.
 
+## 3.1 Get API keys (OpenAI / Gemini / Groq)
+
+Danslator requires you to paste a provider API key in the UI before translating.
+
+OpenAI key:
+- Site: `https://platform.openai.com/`
+- API keys page: `https://platform.openai.com/api-keys`
+- Create a key, then copy and paste it into Danslator when provider is `OpenAI`.
+
+Gemini key:
+- Site: `https://aistudio.google.com/`
+- API key page: `https://aistudio.google.com/apikey`
+- Create a key, then copy and paste it into Danslator when provider is `Gemini`.
+- If you see quota errors (`429`), check usage/billing in AI Studio.
+
+Groq key:
+- Site: `https://console.groq.com/`
+- API keys page: `https://console.groq.com/keys`
+- Create a key, then copy and paste it into Danslator when provider is `Groq`.
+
+Security tips:
+- Never commit keys to git.
+- Rotate/revoke keys immediately if exposed.
+
 ## 4. Run in development
 
 ```bash
