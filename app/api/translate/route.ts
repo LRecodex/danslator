@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { createJob, failJob, setJobOutput, updateJob } from '@/lib/job-store';
 import { processPdf } from '@/services/pdf-processor';
-import { OutputStyle, TranslateDirection, TranslationProvider } from '@/types';
+import { TranslateDirection, TranslationProvider } from '@/types';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File | null;
     const direction = (formData.get('direction') as TranslateDirection | null) ?? 'en-ms';
     const provider = (formData.get('provider') as TranslationProvider | null) ?? 'openai';
-    const outputStyle = (formData.get('outputStyle') as OutputStyle | null) ?? 'clean';
+    const outputStyle = 'overlay';
     const includeImageText = false;
     const openAiApiKey = (formData.get('openAiApiKey') as string | null)?.trim() ?? '';
     const geminiApiKey = (formData.get('geminiApiKey') as string | null)?.trim() ?? '';
@@ -38,9 +38,6 @@ export async function POST(req: NextRequest) {
     }
     if (provider !== 'openai' && provider !== 'gemini' && provider !== 'groq') {
       return NextResponse.json({ error: 'Invalid provider. Use openai, gemini, or groq.' }, { status: 400 });
-    }
-    if (outputStyle !== 'overlay' && outputStyle !== 'clean') {
-      return NextResponse.json({ error: 'Invalid output style. Use overlay or clean.' }, { status: 400 });
     }
     if (provider === 'openai' && !openAiApiKey) {
       return NextResponse.json({ error: 'OpenAI API key is required for OpenAI provider.' }, { status: 400 });

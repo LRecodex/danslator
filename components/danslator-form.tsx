@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { OutputStyle, ProgressState, TranslateDirection, TranslationProvider } from '@/types';
+import { ProgressState, TranslateDirection, TranslationProvider } from '@/types';
 
 const initialProgress: ProgressState = {
   status: 'queued',
@@ -13,7 +13,6 @@ export function DanslatorForm() {
   const [file, setFile] = useState<File | null>(null);
   const [direction, setDirection] = useState<TranslateDirection>('en-ms');
   const [provider, setProvider] = useState<TranslationProvider>('openai');
-  const [outputStyle, setOutputStyle] = useState<OutputStyle>('clean');
   const [openAiApiKey, setOpenAiApiKey] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [groqApiKey, setGroqApiKey] = useState('');
@@ -73,7 +72,7 @@ export function DanslatorForm() {
     formData.append('direction', direction);
     formData.append('provider', provider);
     formData.append('includeImageText', 'false');
-    formData.append('outputStyle', outputStyle);
+    formData.append('outputStyle', 'overlay');
     formData.append('openAiApiKey', openAiApiKey.trim());
     formData.append('geminiApiKey', geminiApiKey.trim());
     formData.append('groqApiKey', groqApiKey.trim());
@@ -182,20 +181,6 @@ export function DanslatorForm() {
         </div>
       </div>
       </div>
-
-      {file ? (
-        <div className="section">
-          <div className="section-title">Output Style</div>
-          <select
-            id="output-style"
-            value={outputStyle}
-            onChange={(e) => setOutputStyle(e.target.value as OutputStyle)}
-          >
-            <option value="clean">Clean Regenerated PDF (recommended)</option>
-            <option value="overlay">Overlay on Original PDF (may look layered)</option>
-          </select>
-        </div>
-      ) : null}
 
       <button className="primary-btn" type="button" onClick={handleSubmit} disabled={!canTranslate}>
         Translate PDF

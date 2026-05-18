@@ -114,12 +114,9 @@ Open:
    - Malay -> English
 4. Choose provider (`OpenAI`, `Gemini`, or `Groq`).
 5. Paste the matching API key.
-6. Choose output style:
-   - `Clean Regenerated PDF (recommended)`
-   - `Overlay on Original PDF`
-7. Click `Translate PDF`.
-8. Wait while progress updates.
-9. Click `Download Translated PDF` when complete.
+6. Click `Translate PDF`.
+7. Wait while progress updates.
+8. Click `Download Translated PDF` when complete.
 
 ## Build and production run
 
@@ -142,7 +139,7 @@ npm run start
     - `file` (PDF)
     - `direction` (`en-ms` or `ms-en`)
     - `provider` (`openai`, `gemini`, or `groq`)
-    - `outputStyle` (`clean` or `overlay`)
+    - `outputStyle` (`overlay`; preserve-layout mode used by default)
     - `openAiApiKey` (string, optional)
     - `geminiApiKey` (string, optional)
     - `groqApiKey` (string, optional)
@@ -152,6 +149,6 @@ npm run start
 
 ## Notes and limitations
 
-- Layout preservation is best effort (overlay strategy on copied pages).
+- Layout preservation is best effort and uses preserve-layout overlay mode by default.
 - Very complex layouts may not perfectly match original text flow.
 - Jobs are stored on local disk under `/tmp/danslator-jobs` and expire automatically; for production, use persistent shared storage.
