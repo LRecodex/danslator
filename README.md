@@ -88,6 +88,8 @@ Current app behavior:
 - User chooses provider: OpenAI, Gemini, or Groq.
 - Provider key is always read from user input in the form per request.
 - No provider key is loaded from `.env`.
+- Optional tuning (non-secret): set `GROQ_MODEL` in `.env.local` to adjust Groq model selection.
+  - Default: `llama-3.1-8b-instant`
 
 ## 3.1 Get API keys (OpenAI / Gemini / Groq)
 

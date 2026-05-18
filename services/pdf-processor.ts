@@ -266,6 +266,18 @@ function chunkStrings(items: string[], size = 30): string[][] {
   return out;
 }
 
+function normalizeForWinAnsi(text: string): string {
+  // pdf-lib standard Helvetica uses WinAnsi and cannot encode many unicode symbols
+  // (e.g. checkmarks). Replace unsupported glyphs with safe ASCII equivalents.
+  return text
+    .replace(/✔|✅/g, '[x]')
+    .replace(/[•●]/g, '-')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/—|–/g, '-')
+    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '');
+}
+
 export async function processPdf(
   inputBuffer: Buffer,
   options: ProcessOptions
@@ -393,7 +405,7 @@ export async function processPdf(
     for (let i = 0; i < allBlocks.length; i++) {
       const block = allBlocks[i];
       const page = outPdf.getPage(block.pageIndex);
-      const translatedText = translated[i] ?? block.text;
+      const translatedText = normalizeForWinAnsi(translated[i] ?? block.text);
       const fontSize = Math.max(8, Math.min(14, block.height));
 
       const padX = 2;

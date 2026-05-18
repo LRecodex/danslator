@@ -163,6 +163,7 @@ async function translateWithGroq(
     '- Keep empty strings as empty strings.'
   ].join('\n');
 
+    const model = process.env.GROQ_MODEL?.trim() || 'llama-3.1-8b-instant';
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -170,7 +171,7 @@ async function translateWithGroq(
         Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model,
         temperature: 0.1,
         response_format: { type: 'json_object' },
         messages: [
