@@ -268,6 +268,59 @@ function chunkStrings(items: string[], size = 30): string[][] {
   return out;
 }
 
+function mergeTextBlocks(blocks: TextBlock[]): TextBlock[] {
+  const byPage = new Map<number, TextBlock[]>();
+  for (const b of blocks) {
+    if (!byPage.has(b.pageIndex)) byPage.set(b.pageIndex, []);
+    byPage.get(b.pageIndex)!.push(b);
+  }
+
+  const merged: TextBlock[] = [];
+
+  for (const [pageIndex, pageBlocks] of byPage.entries()) {
+    const sorted = [...pageBlocks].sort((a, b) => {
+      const yDiff = Math.abs(a.y - b.y);
+      if (yDiff > 3) return b.y - a.y; // top to bottom in PDF coordinates
+      return a.x - b.x; // left to right
+    });
+
+    const rows: TextBlock[][] = [];
+    for (const block of sorted) {
+      const row = rows.find((r) => Math.abs(r[0].y - block.y) <= Math.max(3, block.height * 0.35));
+      if (row) row.push(block);
+      else rows.push([block]);
+    }
+
+    for (const row of rows) {
+      const rowSorted = row.sort((a, b) => a.x - b.x);
+      let current = { ...rowSorted[0] };
+
+      for (let i = 1; i < rowSorted.length; i++) {
+        const next = rowSorted[i];
+        const currentRight = current.x + current.width;
+        const gap = next.x - currentRight;
+        const maxJoinGap = Math.max(14, current.height * 1.6);
+
+        if (gap <= maxJoinGap && gap >= -2) {
+          current.text = `${current.text} ${next.text}`.replace(/\s+/g, ' ').trim();
+          const newRight = Math.max(currentRight, next.x + next.width);
+          current.width = newRight - current.x;
+          current.height = Math.max(current.height, next.height);
+          current.y = Math.min(current.y, next.y);
+          current.source = current.source === 'ocr' || next.source === 'ocr' ? 'ocr' : 'pdf';
+        } else {
+          merged.push({ ...current, pageIndex });
+          current = { ...next };
+        }
+      }
+
+      merged.push({ ...current, pageIndex });
+    }
+  }
+
+  return merged;
+}
+
 function normalizeForWinAnsi(text: string): string {
   // pdf-lib standard Helvetica uses WinAnsi and cannot encode many unicode symbols
   // (e.g. checkmarks). Replace unsupported glyphs with safe ASCII equivalents.
@@ -294,15 +347,15 @@ function drawBlocksOnPage(
     const fontSize = Math.max(8, Math.min(14, block.height));
 
     if (useMask) {
-      const padX = 2;
-      const padY = 2;
+      const padX = 1.5;
+      const padY = 1;
       page.drawRectangle({
         x: Math.max(0, block.x - padX),
         y: Math.max(0, block.y - padY),
-        width: Math.max(14, block.width + padX * 2),
-        height: Math.max(12, block.height + padY * 2 + 2),
+        width: Math.max(12, block.width + padX * 2),
+        height: Math.max(10, block.height + padY * 2 + 1),
         color: rgb(1, 1, 1),
-        opacity: 1
+        opacity: 0.94
       });
     }
 
@@ -349,7 +402,7 @@ export async function processPdf(
 
     const ocrBlocks: TextBlock[] = [];
 
-    const allBlocks = [...pdfBlocks, ...ocrBlocks];
+    const allBlocks = mergeTextBlocks([...pdfBlocks, ...ocrBlocks]);
     report('Translating extracted text', 55);
     log('translate:start', {
       provider: options.provider,
