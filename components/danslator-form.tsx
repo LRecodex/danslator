@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ProgressState, TranslateDirection, TranslationProvider } from '@/types';
+import { OutputStyle, ProgressState, TranslateDirection, TranslationProvider } from '@/types';
 
 const initialProgress: ProgressState = {
   status: 'queued',
@@ -14,6 +14,7 @@ export function DanslatorForm() {
   const [direction, setDirection] = useState<TranslateDirection>('en-ms');
   const [provider, setProvider] = useState<TranslationProvider>('openai');
   const [mode, setMode] = useState<'text-only' | 'text-images'>('text-only');
+  const [outputStyle, setOutputStyle] = useState<OutputStyle>('clean');
   const [openAiApiKey, setOpenAiApiKey] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [groqApiKey, setGroqApiKey] = useState('');
@@ -73,6 +74,7 @@ export function DanslatorForm() {
     formData.append('direction', direction);
     formData.append('provider', provider);
     formData.append('includeImageText', String(mode === 'text-images'));
+    formData.append('outputStyle', outputStyle);
     formData.append('openAiApiKey', openAiApiKey.trim());
     formData.append('geminiApiKey', geminiApiKey.trim());
     formData.append('groqApiKey', groqApiKey.trim());
@@ -213,6 +215,15 @@ export function DanslatorForm() {
               Translate PDF text + text inside images
             </label>
           </div>
+          <label htmlFor="output-style" style={{ marginTop: 10 }}>Output Style</label>
+          <select
+            id="output-style"
+            value={outputStyle}
+            onChange={(e) => setOutputStyle(e.target.value as OutputStyle)}
+          >
+            <option value="clean">Clean Regenerated PDF (recommended)</option>
+            <option value="overlay">Overlay on Original PDF (may look layered)</option>
+          </select>
         </div>
       ) : null}
 

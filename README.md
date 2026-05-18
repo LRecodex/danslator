@@ -136,9 +136,12 @@ Open:
 6. Choose translation mode:
    - `Translate PDF text only`
    - `Translate PDF text + text inside images`
-7. Click `Translate PDF`.
-8. Wait while progress updates.
-9. Click `Download Translated PDF` when complete.
+7. Choose output style:
+   - `Clean Regenerated PDF (recommended)`
+   - `Overlay on Original PDF`
+8. Click `Translate PDF`.
+9. Wait while progress updates.
+10. Click `Download Translated PDF` when complete.
 
 ## Build and production run
 
@@ -162,6 +165,7 @@ npm run start
     - `direction` (`en-ms` or `ms-en`)
     - `provider` (`openai`, `gemini`, or `groq`)
     - `includeImageText` (`true` or `false`)
+    - `outputStyle` (`clean` or `overlay`)
     - `openAiApiKey` (string, optional)
     - `geminiApiKey` (string, optional)
     - `groqApiKey` (string, optional)

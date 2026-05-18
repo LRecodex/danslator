@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { TextBlock, TranslateDirection, TranslationProvider } from '@/types';
+import { OutputStyle, TextBlock, TranslateDirection, TranslationProvider } from '@/types';
 import { translateChunks } from './translation';
 import { updateJob } from '@/lib/job-store';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
@@ -23,6 +23,7 @@ interface ProcessOptions {
   jobId: string;
   direction: TranslateDirection;
   provider: TranslationProvider;
+  outputStyle: OutputStyle;
   includeImageText: boolean;
   fileName: string;
   openAiApiKey: string;
@@ -279,6 +280,45 @@ function normalizeForWinAnsi(text: string): string {
     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '');
 }
 
+function drawBlocksOnPage(
+  page: any,
+  blocks: TextBlock[],
+  translated: string[],
+  startIndex: number,
+  font: any,
+  useMask: boolean
+) {
+  let idx = startIndex;
+  for (const block of blocks) {
+    const translatedText = normalizeForWinAnsi(translated[idx] ?? block.text);
+    const fontSize = Math.max(8, Math.min(14, block.height));
+
+    if (useMask) {
+      const padX = 2;
+      const padY = 2;
+      page.drawRectangle({
+        x: Math.max(0, block.x - padX),
+        y: Math.max(0, block.y - padY),
+        width: Math.max(14, block.width + padX * 2),
+        height: Math.max(12, block.height + padY * 2 + 2),
+        color: rgb(1, 1, 1),
+        opacity: 1
+      });
+    }
+
+    page.drawText(translatedText, {
+      x: Math.max(0, block.x),
+      y: Math.max(0, block.y),
+      maxWidth: Math.max(20, block.width),
+      size: fontSize,
+      font,
+      color: rgb(0, 0, 0)
+    });
+    idx++;
+  }
+  return idx;
+}
+
 export async function processPdf(
   inputBuffer: Buffer,
   options: ProcessOptions
@@ -398,37 +438,28 @@ export async function processPdf(
     const sourcePdf = await PDFDocument.load(inputBuffer);
     const outPdf = await PDFDocument.create();
     const font = await outPdf.embedFont(StandardFonts.Helvetica);
+    const totalPages = sourcePdf.getPageCount();
 
-    for (let i = 0; i < sourcePdf.getPageCount(); i++) {
-      const [copied] = await outPdf.copyPages(sourcePdf, [i]);
-      outPdf.addPage(copied);
-    }
-
-    for (let i = 0; i < allBlocks.length; i++) {
-      const block = allBlocks[i];
-      const page = outPdf.getPage(block.pageIndex);
-      const translatedText = normalizeForWinAnsi(translated[i] ?? block.text);
-      const fontSize = Math.max(8, Math.min(14, block.height));
-
-      const padX = 2;
-      const padY = 2;
-      page.drawRectangle({
-        x: Math.max(0, block.x - padX),
-        y: Math.max(0, block.y - padY),
-        width: Math.max(14, block.width + padX * 2),
-        height: Math.max(12, block.height + padY * 2 + 2),
-        color: rgb(1, 1, 1),
-        opacity: 1
-      });
-
-      page.drawText(translatedText, {
-        x: Math.max(0, block.x),
-        y: Math.max(0, block.y),
-        maxWidth: Math.max(20, block.width),
-        size: fontSize,
-        font,
-        color: rgb(0, 0, 0)
-      });
+    if (options.outputStyle === 'overlay') {
+      for (let i = 0; i < totalPages; i++) {
+        const [copied] = await outPdf.copyPages(sourcePdf, [i]);
+        outPdf.addPage(copied);
+      }
+      let translatedIdx = 0;
+      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+        const page = outPdf.getPage(pageIndex);
+        const blocks = allBlocks.filter((b) => b.pageIndex === pageIndex);
+        translatedIdx = drawBlocksOnPage(page, blocks, translated, translatedIdx, font, true);
+      }
+    } else {
+      let translatedIdx = 0;
+      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+        const srcPage = sourcePdf.getPage(pageIndex);
+        const { width, height } = srcPage.getSize();
+        const page = outPdf.addPage([width, height]);
+        const blocks = allBlocks.filter((b) => b.pageIndex === pageIndex);
+        translatedIdx = drawBlocksOnPage(page, blocks, translated, translatedIdx, font, false);
+      }
     }
 
     const output = Buffer.from(await outPdf.save());
