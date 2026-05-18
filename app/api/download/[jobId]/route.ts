@@ -3,8 +3,13 @@ import { getJob } from '@/lib/job-store';
 
 export const runtime = 'nodejs';
 
-export async function GET(_: NextRequest, { params }: { params: { jobId: string } }) {
-  const job = getJob(params.jobId);
+export async function GET(
+  _: NextRequest,
+  { params }: { params: Promise<{ jobId: string }> }
+) {
+  const { jobId } = await params;
+  if (!jobId) return NextResponse.json({ error: 'Missing job id' }, { status: 400 });
+  const job = getJob(jobId);
   if (!job || !job.outputBuffer) {
     return NextResponse.json({ error: 'Translated PDF is not available yet' }, { status: 404 });
   }

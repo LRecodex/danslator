@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ProgressState, TranslateDirection } from '@/types';
+import { ProgressState, TranslateDirection, TranslationProvider } from '@/types';
 
 const initialProgress: ProgressState = {
   status: 'queued',
@@ -12,8 +12,11 @@ const initialProgress: ProgressState = {
 export function DanslatorForm() {
   const [file, setFile] = useState<File | null>(null);
   const [direction, setDirection] = useState<TranslateDirection>('en-ms');
+  const [provider, setProvider] = useState<TranslationProvider>('openai');
   const [mode, setMode] = useState<'text-only' | 'text-images'>('text-only');
   const [openAiApiKey, setOpenAiApiKey] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [groqApiKey, setGroqApiKey] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressState>(initialProgress);
@@ -21,8 +24,8 @@ export function DanslatorForm() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const canTranslate = useMemo(() => {
-    return !!file && !!openAiApiKey.trim() && !['uploading', 'processing'].includes(progress.status);
-  }, [file, openAiApiKey, progress.status]);
+    return !!file && !['uploading', 'processing'].includes(progress.status);
+  }, [file, progress.status]);
 
   useEffect(() => {
     if (!jobId) return;
@@ -67,8 +70,11 @@ export function DanslatorForm() {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('direction', direction);
+    formData.append('provider', provider);
     formData.append('includeImageText', String(mode === 'text-images'));
     formData.append('openAiApiKey', openAiApiKey.trim());
+    formData.append('geminiApiKey', geminiApiKey.trim());
+    formData.append('groqApiKey', groqApiKey.trim());
 
     try {
       const res = await fetch('/api/translate', { method: 'POST', body: formData });
@@ -124,14 +130,40 @@ export function DanslatorForm() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="openai-key">OpenAI API Key</label>
+          <label htmlFor="provider">Translation Provider</label>
+          <select
+            id="provider"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as TranslationProvider)}
+            style={{ marginBottom: 8 }}
+          >
+            <option value="openai">Use OpenAI</option>
+            <option value="gemini">Use Gemini</option>
+            <option value="groq">Use Groq</option>
+          </select>
+          <label htmlFor="provider-key">
+            {provider === 'openai'
+              ? 'OpenAI API Key'
+              : provider === 'gemini'
+                ? 'Gemini API Key'
+                : 'Groq API Key'}
+          </label>
           <input
-            id="openai-key"
+            id="provider-key"
             type="password"
-            placeholder="sk-..."
-            value={openAiApiKey}
-            onChange={(e) => setOpenAiApiKey(e.target.value)}
+            placeholder={provider === 'openai' ? 'sk-...' : provider === 'gemini' ? 'AIza...' : 'gsk_...'}
+            value={
+              provider === 'openai' ? openAiApiKey : provider === 'gemini' ? geminiApiKey : groqApiKey
+            }
+            onChange={(e) => {
+              if (provider === 'openai') setOpenAiApiKey(e.target.value);
+              else if (provider === 'gemini') setGeminiApiKey(e.target.value);
+              else setGroqApiKey(e.target.value);
+            }}
           />
+          <p className="muted" style={{ marginTop: 8 }}>
+            Provide the API key for the selected provider. Keys are sent per request only.
+          </p>
         </div>
       </div>
 

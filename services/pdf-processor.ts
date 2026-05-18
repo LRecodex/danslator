@@ -1,10 +1,10 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { TextBlock, TranslateDirection } from '@/types';
+import { TextBlock, TranslateDirection, TranslationProvider } from '@/types';
 import { translateChunks } from './translation';
 import { updateJob } from '@/lib/job-store';
-import { createCanvas } from 'canvas';
 import { createWorker } from 'tesseract.js';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+import * as path from 'path';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/legacy/build/pdf.worker.mjs',
@@ -16,14 +16,25 @@ type ProgressCb = (message: string, progress: number) => void;
 interface ProcessOptions {
   jobId: string;
   direction: TranslateDirection;
+  provider: TranslationProvider;
   includeImageText: boolean;
   fileName: string;
   openAiApiKey: string;
+  geminiApiKey: string;
+  groqApiKey: string;
+}
+
+function getPdfLoadOptions(pdfBytes: Uint8Array) {
+  const standardFontDataUrl = path.join(process.cwd(), 'node_modules', 'pdfjs-dist', 'standard_fonts') + path.sep;
+  return {
+    data: pdfBytes,
+    standardFontDataUrl
+  };
 }
 
 async function extractPdfTextBlocks(pdfBytes: Uint8Array): Promise<TextBlock[]> {
   const blocks: TextBlock[] = [];
-  const loadingTask = pdfjs.getDocument({ data: pdfBytes });
+  const loadingTask = pdfjs.getDocument(getPdfLoadOptions(pdfBytes));
   const doc = await loadingTask.promise;
 
   for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber++) {
@@ -55,8 +66,9 @@ async function extractPdfTextBlocks(pdfBytes: Uint8Array): Promise<TextBlock[]> 
 
 async function extractOcrBlocks(pdfBytes: Uint8Array, progress: ProgressCb): Promise<TextBlock[]> {
   const blocks: TextBlock[] = [];
-  const loadingTask = pdfjs.getDocument({ data: pdfBytes });
+  const loadingTask = pdfjs.getDocument(getPdfLoadOptions(pdfBytes));
   const doc = await loadingTask.promise;
+  const createCanvas = await loadCanvasFactory();
 
   const worker = await createWorker('eng+msa');
 
@@ -95,6 +107,17 @@ async function extractOcrBlocks(pdfBytes: Uint8Array, progress: ProgressCb): Pro
   return blocks;
 }
 
+async function loadCanvasFactory(): Promise<(width: number, height: number) => any> {
+  try {
+    const mod = await import('canvas');
+    return mod.createCanvas;
+  } catch {
+    throw new Error(
+      'OCR mode requires the optional "canvas" package. Install system deps and run: npm install canvas'
+    );
+  }
+}
+
 function chunkStrings(items: string[], size = 30): string[][] {
   const out: string[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
@@ -127,7 +150,13 @@ export async function processPdf(
 
   const batches = chunkStrings(textList, 30);
   for (let i = 0; i < batches.length; i++) {
-    const batchResult = await translateChunks(batches[i], options.direction, options.openAiApiKey);
+    const batchResult = await translateChunks(batches[i], {
+      direction: options.direction,
+      provider: options.provider,
+      openAiApiKey: options.openAiApiKey,
+      geminiApiKey: options.geminiApiKey,
+      groqApiKey: options.groqApiKey
+    });
     translated.push(...batchResult);
     const pct = 55 + Math.round(((i + 1) / batches.length) * 25);
     report(`Translating content (${i + 1}/${batches.length})`, pct);
@@ -150,19 +179,22 @@ export async function processPdf(
     const translatedText = translated[i] ?? block.text;
     const fontSize = Math.max(8, Math.min(14, block.height));
 
-    // Paint white background block and draw translated text on top.
+    // Paint a solid white mask slightly larger than the detected text box
+    // so source glyph edges do not bleed through.
+    const padX = 2;
+    const padY = 2;
     page.drawRectangle({
-      x: block.x,
-      y: block.y,
-      width: Math.max(10, block.width),
-      height: Math.max(10, block.height + 2),
+      x: Math.max(0, block.x - padX),
+      y: Math.max(0, block.y - padY),
+      width: Math.max(14, block.width + padX * 2),
+      height: Math.max(12, block.height + padY * 2 + 2),
       color: rgb(1, 1, 1),
-      opacity: 0.85
+      opacity: 1
     });
 
     page.drawText(translatedText, {
-      x: block.x,
-      y: block.y,
+      x: Math.max(0, block.x),
+      y: Math.max(0, block.y),
       maxWidth: Math.max(20, block.width),
       size: fontSize,
       font,

@@ -1,4 +1,5 @@
 export type TranslateDirection = 'en-ms' | 'ms-en';
+export type TranslationProvider = 'openai' | 'gemini' | 'groq';
 
 export type JobStatus = 'queued' | 'uploading' | 'processing' | 'complete' | 'error';
 

@@ -10,20 +10,22 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "canvas": "^2.11.2",
-    "next": "14.2.5",
-    "openai": "^4.56.0",
-    "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^4.7.76",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "tesseract.js": "^5.1.1",
-    "uuid": "^10.0.0"
+    "next": "latest",
+    "openai": "latest",
+    "pdf-lib": "latest",
+    "pdfjs-dist": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "tesseract.js": "latest",
+    "uuid": "latest"
+  },
+  "optionalDependencies": {
+    "canvas": "latest"
   },
   "devDependencies": {
-    "@types/node": "20.14.15",
-    "@types/react": "18.3.3",
-    "@types/react-dom": "18.3.0",
-    "typescript": "5.5.4"
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "typescript": "latest"
   }
 }
